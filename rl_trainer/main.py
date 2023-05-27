@@ -8,6 +8,8 @@ import sys
 base_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(base_dir))
 from algo.ddpg import DDPG
+from algo.sac import SAC
+from algo.qmix import QMIX
 from common import *
 from log_path import *
 from env.chooseenv import make
@@ -43,12 +45,18 @@ def main(args):
     torch.manual_seed(args.seed)
 
     # 定义保存路径
-    run_dir, log_dir = make_logpath(args.game_name, args.algo)
+    run_dir = log_dir = os.path.join('exp', args.algo, args.exp_name)
+    os.makedirs(run_dir, exist_ok=True)
     writer = SummaryWriter(str(log_dir))
     save_config(args, log_dir)
-
-    model = DDPG(obs_dim, act_dim, ctrl_agent_num, args)
-
+    
+    if args.algo in ["ddpg", "bicnet"]:
+        model = DDPG(obs_dim, act_dim, ctrl_agent_num, args)
+    elif args.algo == "sac":
+        model = SAC(obs_dim, act_dim, ctrl_agent_num, args)
+    elif args.algo == "qmix":
+        model = QMIX(obs_dim, act_dim, ctrl_agent_num, args)
+        
     if args.load_model:
         load_dir = os.path.join(os.path.dirname(run_dir), "run" + str(args.load_model_run))
         model.load_model(load_dir, episode=args.load_model_run_episode)
@@ -84,7 +92,9 @@ def main(args):
 
             # ============================== add opponent actions =================================
             # we use rule-based greedy agent here. Or, you can switch to random agent.
-            actions = logits_greedy(state_to_training, logits, height, width)
+            # get actions from neural networks or greedy snake strategy(get close to beans)
+            # action_list[:3] = logits_action, action_list[3:] = greedy_action
+            actions = logits_greedy(state_to_training, logits, height, width)   
             # actions = logits_random(act_dim, logits)
 
             # Receive reward [r_t,i]i=1~n and observe new state s_t+1
@@ -150,8 +160,9 @@ def main(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--game_name', default="snakes_3v3", type=str)
-    parser.add_argument('--algo', default="ddpg", type=str, help="bicnet/ddpg")
-    parser.add_argument('--max_episodes', default=50000, type=int)
+    parser.add_argument('--algo', default="ddpg", type=str, help="ddpg/bicnet/sac/qmix")
+    parser.add_argument('--max_episodes', default=10000, type=int)
+    parser.add_argument('--exp_name', default="dev", type=str)
     parser.add_argument('--episode_length', default=200, type=int)
     parser.add_argument('--output_activation', default="softmax", type=str, help="tanh/softmax")
 
@@ -162,7 +173,7 @@ if __name__ == '__main__':
     parser.add_argument('--a_lr', default=0.0001, type=float)
     parser.add_argument('--c_lr', default=0.0001, type=float)
     parser.add_argument('--batch_size', default=64, type=int)
-    parser.add_argument('--epsilon', default=0.5, type=float)
+    parser.add_argument('-e', '--epsilon', default=0.5, type=float)
     parser.add_argument('--epsilon_speed', default=0.99998, type=float)
 
     parser.add_argument("--save_interval", default=1000, type=int)

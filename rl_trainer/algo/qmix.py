@@ -8,9 +8,9 @@ base_dir = Path(__file__).resolve().parent.parent
 sys.path.append(str(base_dir))
 from replay_buffer import ReplayBuffer
 from common import soft_update, hard_update, device
-from algo.network import Actor, Critic
+from algo.network_qmix import Actor, Critic
 
-class DDPG:
+class QMIX:
 
     def __init__(self, obs_dim, act_dim, num_agent, args):
         self.obs_dim = obs_dim

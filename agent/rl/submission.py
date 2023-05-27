@@ -161,7 +161,7 @@ def logits2action(logits):
 
 
 agent = RLAgent(26, 4, 3)
-actor_net = os.path.dirname(os.path.abspath(__file__)) + "/actor_2000.pth"
+actor_net = "/mnt/lustre/sjtu/home/qc316/projects/Competition_3v3snakes_77/exp/qmix/ep30000_default/trained_model/actor_17000.pth"
 agent.load_model(actor_net)
 
 
