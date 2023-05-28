@@ -32,14 +32,12 @@ By default-parameters, the total reward of training is shown below.
 
 You can edit different parameters, for example
 
-> python rl_trainer/main.py --algo "bicnet" --epsilon 0.8
+> python rl_trainer/main.py --algo "qmix" --exp_name dev --epsilon 0.5
 
 - important arguments
   - --algo: ddpg/bicnet/sac/qmix
   - --exp_name: path to save models and logs
   - --epsilon: for epsilon-greedy algorithms
-
-Baseline performance:
 
 You can locally evaluation your model.
 
