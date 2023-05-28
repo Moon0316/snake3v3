@@ -23,6 +23,11 @@ class Actor(nn.Module):
         self.prev_dense = mlp(sizes_prev)
 
         if self.args.algo == "bicnet":
+            ### RNN
+            self.comm_net = RNNNet(HIDDEN_SIZE, HIDDEN_SIZE)
+            ### GRU
+            self.comm_net = GRUNet(HIDDEN_SIZE, HIDDEN_SIZE)
+            ### LSTM
             self.comm_net = LSTMNet(HIDDEN_SIZE, HIDDEN_SIZE)
             sizes_post = [HIDDEN_SIZE << 1, HIDDEN_SIZE, act_dim]
         elif self.args.algo == "ddpg":
@@ -113,3 +118,23 @@ class RNNNet(nn.Module):
     def forward(self, data):
         output, _ = self.rnn(data)
         return output
+ 
+class GRUNet(nn.Module):
+    def __init__(self,
+                 input_size,
+                 hidden_size,
+                 batch_first=True,
+                 bidirectional=True):
+        super(GRUNet, self).__init__()
+
+        self.gru = nn.GRU(
+            input_size=input_size,
+            hidden_size=hidden_size,
+            batch_first=batch_first,
+            bidirectional=bidirectional
+        )
+
+    def forward(self, data):
+        output, _ = self.gru(data)
+        return output
+   
