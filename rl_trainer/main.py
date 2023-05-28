@@ -58,7 +58,7 @@ def main(args):
         model = QMIX(obs_dim, act_dim, ctrl_agent_num, args)
         
     if args.load_model:
-        load_dir = os.path.join(os.path.dirname(run_dir), "run" + str(args.load_model_run))
+        load_dir = os.path.join('exp', args.algo, args.exp_name)
         model.load_model(load_dir, episode=args.load_model_run_episode)
 
     episode = 0

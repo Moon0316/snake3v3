@@ -5,9 +5,11 @@ import torch
 from torch import nn
 from torch.distributions import Categorical
 import numpy as np
+import torch.nn.functional as F
+from torch.distributions import Normal
 
 
-HIDDEN_SIZE=256
+HIDDEN_SIZE=128
 device =  torch.device("cpu")
 
 from typing import Union
@@ -99,25 +101,30 @@ def get_observations(state, agents_index, obs_dim, height, width):
 
 
 class Actor(nn.Module):
-    def __init__(self, obs_dim, act_dim, num_agents, args, output_activation='softmax'):
+    def __init__(self, obs_dim, act_dim, num_agents, args, output_activation='tanh'):
         super().__init__()
-
         self.obs_dim = obs_dim
         self.act_dim = act_dim
         self.num_agents = num_agents
-
         self.args = args
 
-        sizes_prev = [obs_dim, HIDDEN_SIZE]
-        sizes_post = [HIDDEN_SIZE, HIDDEN_SIZE, act_dim]
+        self.fc1 = torch.nn.Linear(obs_dim, HIDDEN_SIZE)
+        self.fc_mu = torch.nn.Linear(HIDDEN_SIZE, act_dim)
+        self.fc_std = torch.nn.Linear(HIDDEN_SIZE, act_dim)
+        self.activate = nn.Softmax(dim=-1)
+        
+    def forward(self, x):
 
-        self.prev_dense = mlp(sizes_prev)
-        self.post_dense = mlp(sizes_post, output_activation=output_activation)
-
-    def forward(self, obs_batch):
-        out = self.prev_dense(obs_batch)
-        out = self.post_dense(out)
-        return out
+        x = F.relu(self.fc1(x))
+        mu = self.fc_mu(x)
+        std = F.softplus(self.fc_std(x))
+        dist = Normal(mu, std)
+        normal_sample = dist.rsample()  # rsample()是重参数化采样
+        log_prob = dist.log_prob(normal_sample)
+        action = self.activate(normal_sample)
+        # 计算tanh_normal分布的对数概率密度
+        log_prob = log_prob - torch.log(1 - torch.tanh(action).pow(2) + 1e-7)
+        return action, log_prob
 
 
 class RLAgent(object):
@@ -131,7 +138,7 @@ class RLAgent(object):
 
     def choose_action(self, obs):
         obs = torch.Tensor([obs]).to(self.device)
-        logits = self.actor(obs).cpu().detach().numpy()[0]
+        logits = self.actor(obs)[0].cpu().detach().numpy()[0]
         return logits
 
     def select_action_to_env(self, obs, ctrl_index):
@@ -141,7 +148,7 @@ class RLAgent(object):
         return action_to_env
 
     def load_model(self, filename):
-        self.actor.load_state_dict(torch.load(filename,map_location=torch.device('cpu')))
+        self.actor.load_state_dict(torch.load(filename, map_location=torch.device('cpu')))
 
 
 def to_joint_action(action, ctrl_index):
@@ -161,7 +168,7 @@ def logits2action(logits):
 
 
 agent = RLAgent(26, 4, 3)
-actor_net = os.path.dirname(os.path.abspath(__file__)) + "/qmix_actor_clr1e-5_30000.pth"
+actor_net = os.path.dirname(os.path.abspath(__file__)) + "/actor_30000.pth"
 agent.load_model(actor_net)
 
 

@@ -3,3 +3,5 @@
 */*/__pycache__/*
 logs/
 exp
+agent/rl/*.pth
+submission_files/submission_*/*.pth
